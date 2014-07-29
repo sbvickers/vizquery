@@ -40,12 +40,12 @@ def get_list(filename):
         Parameters
         ---------
                 filename : string
-                name of the file to be read.
+                Name of the file with object names/coordinates.
 
         Returns
         --------
                 names : list
-                list of the objects in the file
+                List of the names/coordinates of the objects in the file.
     """
 
     import csv
@@ -94,7 +94,21 @@ def do_query(q_params, ignores):
 
 def save_data(data, filename):
     """
+        Saves the data to a file where the filename has been defined in the .ini
+        file.
 
+        Parameters
+        ----------
+                data : list
+                A list of the name/coordinates and the data that has been
+                requested in the .ini file.
+
+                filename : string
+                The name of the file to write the data too.
+
+        Returns
+        ----------
+                None
     """
     with open(filename, 'a') as f:
         string = "{}" + ", {}" * (len(data) - 1) + " \n"
@@ -105,7 +119,21 @@ def save_data(data, filename):
 
 def get_data(q_params, config):
     """
-        queries VizieR using the cdsclient and returns the twomass data
+        Takes either a list of objects or a single object and queries VizieR for
+        the specified data and then saves it to an output file.
+
+        Parameters 
+        ----------
+                q_params : dictionary
+                A dictionary of the parameters to use in the query.
+
+                config : configparser
+                A configparser object used to get the parameters from the .ini
+                config file.
+
+        Returns
+        ----------
+                None
     """
 
     out_list = [str(x) for x in config['query']['outputs'].split()]
@@ -143,26 +171,55 @@ def get_data(q_params, config):
 
 def run_query(filename):
     """
-        Runs the query by importing vizquery into python program
+        This is the function that can be called to run the VizieR query when
+        importing the module into another module.
 
+        Parameters
+        ----------
+                filename : string
+                The filename of the .ini config file with the parameters for the
+                query.
+
+        Returns
+        ----------
+                None
     """
 
     config = configparser.ConfigParser()
-    config.read(filename)
-
-    q_params = make_query(config['query'])
-
-    get_data(q_params, config)
+    try:
+        config.read(filename)
+    except configparser.NoSectionError as e:
+        print( "{} is not a valid input file.".format(args.input_file))
+    else:
+        q_params = make_query(config['query'])
+        get_data(q_params, config)
 
 def main():
     """
-        main function for testing
+        This is the main function called when this script is run directly from
+        the terminal. 
+
+        The script requires an input for the config file which can be given by
+        
+            ./vizquery.py -i 2mass.ini
+
+            or
+
+            python vizquery.py -i 2mass.ini
+
+        This function  performs the same operations as run_query().
+
+        Parameters
+        ----------
+                None
+
+        Returns
+        ----------
+                None
     """
 
     parser = argparse.ArgumentParser()
-
     parser.add_argument('-i', action='store', type=str, dest='input_file', help='Specify input ini file with the query parameters.')
-
     args = parser.parse_args()
 
     assert args.input_file, "Input file not defined."
@@ -174,14 +231,9 @@ def main():
         config.read(args.input_file)
     except configparser.NoSectionError as e:
         print( "{} is not a valid input file.".format(args.input_file))
-        quit()
-
-# gets the query dictionary (need to change parameters in this dictionary to
-# make different queries)
-    q_params = make_query(config['query'])
-
-# gets the first line of actual data from the output
-    get_data(q_params, config)
+    else:
+        q_params = make_query(config['query'])
+        get_data(q_params, config)
 
 if __name__ == '__main__':
     main()
