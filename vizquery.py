@@ -14,33 +14,22 @@ def make_query(config):
         Parameters
         --------
                 config : configparser
-                configparser object of an input ini file with the parameters of the
-                query
-        
+                configparser object of an input ini file with the parameters of
+                the query
 
         Returns
         --------
 
                 query : dictionary
                 query is a dictionary of all the parameters for the VizieR query
-
     """
 
     query = {}
 
-    query['object'] = str(config['object'])
+    items = ['object', 'radius', 'max_out', 'source', 'output', 'mime', 'sort']
 
-    query['radius'] = str(config['radius'])     
-
-    query['max'] = str(config['max_out'])       # maximum number of lines to be return
-
-    query['source'] = str(config['source'])     # catalogue for query
-
-    query['output'] = str(config['outputs'])    # the columns that you actually want
-
-    query['mime'] = str(config['mime'])
-
-    query['sort'] = str(config['sort'])
+    for item in items
+        query[item] = str(config[item])
 
     return query
 
@@ -72,22 +61,9 @@ def get_list(filename):
 
     return names
 
-def not_unit(row):
+def do_query(q_params, ignores):
     """
-        check if line contains a unit
-    """
-
-    units = ['Jy', 'mag', 'mJy', 'cW/m2/nm']
-
-    for unit in units:
-        if unit in row:
-            return False
-
-    return True
-
-def do_query(q_params, nots):
-    """
-        performs a vizieR query using the cdsclient then pips the output
+        Performs a vizieR query using the cdsclient then pips the output
         removing extraneous lines and returning only the required data.
 
         Parameters
@@ -95,22 +71,23 @@ def do_query(q_params, nots):
                 q_params : dictionary
                 Dictionary of parameters for the query.
 
+                ignores : list
+                List of strings to ignore when cycling through rows of data.
+
         Returns
         ---------
                 data : list
-                A list of the required data fields.
+                A list of the required data fields or None if no data found.
     """
 
-    query_string = "vizquery -source='{source}' -c='{object}' -c.rs='{radius}' -out='{output}' -sort='_r' -out.max='{max}' -mime='{mime}'"
-
-    query = query_string.format(**q_params)
+    query = "vizquery -source='{source}' -c='{object}' -c.rs='{radius}' -out='{output}' -sort='_r' -out.max='{max_out}' -mime='{mime}'".format(**q_params)
 
     (output, err) = subprocess.Popen(query, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True).communicate()
 
     rows = output.decode('utf-8').split('\n')
 
     for row in rows:
-        if (row) and not any([x in row for x in nots]):
+        if (row) and not any([x in row for x in ignores]):
             return row.split(';')
 
     return None
@@ -133,13 +110,13 @@ def get_data(q_params, config):
 
     out_list = [str(x) for x in config['query']['outputs'].split()]
     header = ['name/pos'] + out_list
+    ignores = ['---', '#'] + out_list + [str(x) for x in config['processing']['units'].split()]
 
     print( header )
 
-    if q_params['object'] is '':
-        names = get_list(str(config['files']['IN_FILE']))
-
-        out_file = str(config['files']['OUT_FILE'])
+    if not q_params['object']:
+        names = get_list(str(config['files']['in_file']))
+        out_file = str(config['files']['out_file'])
 
         if os.path.exists(out_file):
             import datetime as dt
@@ -149,28 +126,20 @@ def get_data(q_params, config):
         save_data(header, out_file)
 
         for name in names:
-
             q_params['object'] = name
+            data = do_query(q_params, ignores)
 
-
-            data = do_query(q_params, [str(x) for x in config['processing']['nots'].split()] + out_list)
             if data:
                 data = [name] + data
-
                 save_data(data, out_file)
-
             else:
                 save_data([name] + ['---'] * len(out_list), out_file)
 
             print( data )
 
     else:
-        data = do_query(q_params, [str(x) for x in config['processing']['nots'].split()] + [str(x) for x in config['query']['outputs'].split()])
-
+        data = do_query(q_params, ignores)
         print( data )
-        #save_data(data, config)
-
-    return None
 
 def run_query(filename):
     """
@@ -183,8 +152,7 @@ def run_query(filename):
 
     q_params = make_query(config['query'])
 
-    data = get_data(q_params, config)
-
+    get_data(q_params, config)
 
 def main():
     """
@@ -213,7 +181,7 @@ def main():
     q_params = make_query(config['query'])
 
 # gets the first line of actual data from the output
-    data = get_data(q_params, config)
+    get_data(q_params, config)
 
 if __name__ == '__main__':
     main()
