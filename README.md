@@ -6,6 +6,15 @@ package except that it is quicker, avoids
 server issues and is far simpiler to run.
 *********************************************** 
 
+This query script uses the cdsclient which must
+be installed as the script makes a command line
+call to VizieR using the cdsclient. The 
+cdsclient can be found at
+
+    http://cdsarc.u-strasbg.fr/doc/cdsclient.html
+
+and is quite simple to install.
+
 This script can be used by either running it 
 directly in the command line and giving the
 script an 'ini' config file with the parameters
