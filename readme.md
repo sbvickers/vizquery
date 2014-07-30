@@ -43,7 +43,7 @@ to return is given by the *max_out* parameter.
 *mime* is just to set the output to a comma 
 separated variable format. **do not change**.
 
-## **processing** ## 
+## **processing** 
 
 The *units* of the output data should be listed
 here, this is just to ensure that lines of data
